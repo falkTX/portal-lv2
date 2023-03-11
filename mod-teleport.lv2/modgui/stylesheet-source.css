@@ -1,0 +1,57 @@
+.mod-pedal.ui-draggable[mod-uri="https%3A//mod.audio/plugins/teleport%23source"] {
+    z-index: 30 !important;
+}
+.mod-pedal.ui-draggable[mod-uri="https%3A//mod.audio/plugins/teleport%23source"] > div.mod-actions {
+    right: 66px;
+}
+
+.falktx-portal-source {
+    background-color: black;
+    border-radius: 150px 195px;
+    width: 300px;
+    height: 390px;
+}
+
+.falktx-portal-source-frame {
+    position: absolute;
+    width: 390px;
+    height: 390px;
+    filter: contrast(1.75);
+    transform: translateX(-50px) scaleX(0.7);
+}
+
+@keyframes falktx-portal-source-spin { 0% { transform: rotate(-359deg); } }
+
+.falktx-portal-source-light,
+.falktx-portal-source-light::before {
+    position: absolute;
+    animation: falktx-portal-source-spin 7s infinite linear;
+    inset: 0;
+}
+
+.falktx-portal-source-light {
+    -webkit-mask: url(/resources/portal.png{{{ns}}}) top right / 100% 100% no-repeat;
+    mask: url(/resources/portal.png{{{ns}}}) top right / 100% 100% no-repeat;
+    margin: -50px;
+}
+
+.falktx-portal-source-light::before {
+    animation-direction: reverse;
+    content: "";
+}
+.falktx-portal-source-light.on::before {
+    background: linear-gradient(white -50%, transparent 50%, white 125%), cyan;
+}
+.falktx-portal-source-light.off::before {
+    background: linear-gradient(black -50%, transparent 50%, white 125%), white;
+}
+
+.falktx-portal-source .mod-pedal-input,
+.falktx-portal-source .mod-pedal-output {
+    top: 125px;
+    left: 160px;
+}
+
+.falktx-portal-source .mod-pedal-output .mod-audio-output {
+    margin-bottom: 25px;
+}

@@ -1,0 +1,20 @@
+@prefix modgui: <http://moddevices.com/ns/modgui#> .
+@prefix lv2:    <http://lv2plug.in/ns/lv2core#> .
+
+<https://mod.audio/plugins/teleport#sink>
+    modgui:gui [
+        modgui:resourcesDirectory <modgui> ;
+        modgui:iconTemplate <modgui/icon-sink.html> ;
+        modgui:stylesheet <modgui/stylesheet-sink.css> ;
+        modgui:screenshot <modgui/screenshot-sink.png> ;
+        modgui:thumbnail <modgui/thumbnail-sink.png> ;
+    ] .
+
+<https://mod.audio/plugins/teleport#source>
+    modgui:gui [
+        modgui:resourcesDirectory <modgui> ;
+        modgui:iconTemplate <modgui/icon-source.html> ;
+        modgui:stylesheet <modgui/stylesheet-source.css> ;
+        modgui:screenshot <modgui/screenshot-source.png> ;
+        modgui:thumbnail <modgui/thumbnail-source.png> ;
+    ] .

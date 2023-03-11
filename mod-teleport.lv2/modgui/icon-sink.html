@@ -1,0 +1,21 @@
+<div class="mod-pedal falktx-portal-sink">
+    <div class="mod-drag-handle" mod-role="drag-handle"></div>
+    <div class="mod-hidden" mod-role="bypass"></div>
+    <div class="falktx-portal-sink-frame">
+        <div class="falktx-portal-sink-light on" mod-role="bypass-light"></div>
+    </div>
+    <div class="mod-pedal-input">
+        {{#effect.ports.audio.input}}
+        <div class="mod-input mod-input-disconnected" title="{{name}}" mod-role="input-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-input-image"></div>
+        </div>
+        {{/effect.ports.audio.input}}
+    </div>
+    <div class="mod-pedal-output">
+        {{#effect.ports.audio.output}}
+        <div class="mod-output mod-output-disconnected" title="{{name}}" mod-role="output-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-output-image"></div>
+        </div>
+        {{/effect.ports.audio.output}}
+    </div>
+</div>
