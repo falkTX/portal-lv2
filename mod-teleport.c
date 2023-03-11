@@ -32,8 +32,8 @@ typedef struct {
 typedef struct {
     float* buffer_left;
     float* buffer_right;
-    atomic_int counter_sink;
-    atomic_int counter_source;
+    atomic_uint counter_sink;
+    atomic_uint counter_source;
     pthread_mutex_t mutex;
     sem_t sem;
 } Portal;
@@ -55,8 +55,8 @@ static Portal* portal_init(const int prioceiling)
     pthread_mutex_init(&portal->mutex, &attr);
     pthread_mutexattr_destroy(&attr);
 
-    portal->counter_sink = 0;
-    portal->counter_source = 0;
+    atomic_init(&portal->counter_sink, 0);
+    atomic_init(&portal->counter_source, 0);
 
     portal->buffer_left = calloc(MAX_BUFFER_SIZE, sizeof(float));
     portal->buffer_right = calloc(MAX_BUFFER_SIZE, sizeof(float));
@@ -169,8 +169,8 @@ void run_sink(const LV2_Handle instance, const uint32_t samples)
 
     Portal* const portal = g_portal;
 
-    const int counter_sink = portal->counter_sink;
-    const int counter_source = portal->counter_source;
+    const uint counter_sink = atomic_load(&portal->counter_sink);
+    const uint counter_source = atomic_load(&portal->counter_source);
 
     // if there is no source active yet, do nothing
     if (counter_source == 0)
@@ -188,7 +188,7 @@ void run_sink(const LV2_Handle instance, const uint32_t samples)
     pthread_mutex_unlock(&portal->mutex);
 
     // increment sink counter
-    ++portal->counter_sink;
+    atomic_fetch_add(&portal->counter_sink, 1);
 }
 
 void run_source(const LV2_Handle instance, const uint32_t samples)
@@ -204,7 +204,7 @@ void run_source(const LV2_Handle instance, const uint32_t samples)
     Portal* const portal = g_portal;
 
     // if there is no sink processing yet, do nothing
-    if (portal->counter_sink <= 1)
+    if (atomic_load(&portal->counter_sink) <= 1)
         goto clear;
 
     pthread_mutex_lock(&portal->mutex);
@@ -213,7 +213,7 @@ void run_source(const LV2_Handle instance, const uint32_t samples)
     pthread_mutex_unlock(&portal->mutex);
 
     // increment source counter
-    ++portal->counter_source;
+    atomic_fetch_add(&portal->counter_source, 1);
 
     // notify sink so it goes after us
     sem_post(&portal->sem);
@@ -228,31 +228,30 @@ clear:
 void activate_sink(const LV2_Handle instance)
 {
     Portal* const portal = g_portal;
-    portal->counter_sink = 1;
+    atomic_store(&portal->counter_sink, 1);
 }
 
 void activate_source(const LV2_Handle instance)
 {
     Portal* const portal = g_portal;
-    portal->counter_source = 1;
+    atomic_store(&portal->counter_source, 1);
 }
 
 /**********************************************************************************************************************************************************/
 void deactivate_sink(const LV2_Handle instance)
 {
     Portal* const portal = g_portal;
-    portal->counter_sink = 0;
+    atomic_store(&portal->counter_sink, 0);
 }
 
 void deactivate_source(const LV2_Handle instance)
 {
     Portal* const portal = g_portal;
 
-    const int old_counter_source = portal->counter_source;
-    portal->counter_source = 0;
+    const int old_counter_source = atomic_exchange(&portal->counter_source, 0);
 
     // handle case of sink waiting for source
-    if (portal->counter_sink != 1 && old_counter_source != 1)
+    if (atomic_load(&portal->counter_sink) != 1 && old_counter_source != 1)
         sem_post(&portal->sem);
 }
 
