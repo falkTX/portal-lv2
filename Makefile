@@ -2,43 +2,57 @@
 # Makefile for mod-teleport.lv2 #
 # ---------------------------------- #
 
-include Makefile.mk
+include Makefile.base.mk
 
 NAME = mod-teleport
+TARGET = $(NAME).lv2/$(NAME).so
 
 # --------------------------------------------------------------
 # Installation path
 
 PREFIX ?= /usr/local
-COMPLETE_INSTALL_PATH = $(DESTDIR)$(PREFIX)/lib/lv2/$(NAME).lv2
-
-# --------------------------------------------------------------
-# Default target is to build all plugins
-
-all: build
-build: $(NAME)-build
+BUNDLE_INSTALL_PATH = $(DESTDIR)$(PREFIX)/lib/lv2/$(NAME).lv2
 
 # --------------------------------------------------------------
 # Build rules
 
-$(NAME)-build: $(NAME).lv2/$(NAME)$(LIB_EXT)
+BUILD_C_FLAGS += -Wno-unused-parameter
+BUILD_C_FLAGS += -pthread
 
-$(NAME).lv2/$(NAME)$(LIB_EXT): $(NAME).c
-	$(CC) $^ $(BUILD_C_FLAGS) $(LINK_FLAGS) $(SHARED) -pthread -o $@
+BUILD_C_FLAGS += -Wno-deprecated-declarations
 
-# --------------------------------------------------------------
-
-clean:
-	rm -f $(NAME).lv2/$(NAME)$(LIB_EXT)
+LINK_FLAGS += -pthread
 
 # --------------------------------------------------------------
+# Build target
+
+all: $(TARGET)
+
+$(TARGET): build/$(NAME).c.o
+	$(CC) $^ $(LINK_FLAGS) $(SHARED) -o $@
+
+build/$(NAME).c.o: $(NAME).c
+	@mkdir -p $(@D)
+	$(CC) $^ $(BUILD_C_FLAGS) -c -o $@
+
+# --------------------------------------------------------------
+# Install target
 
 install: build
-	install -d $(DESTDIR)$(PREFIX)/lib/lv2/$(NAME).lv2
+	install -d $(BUNDLE_INSTALL_PATH)
+	install -m 644 $(NAME).lv2/*.so $(BUNDLE_INSTALL_PATH)
+	install -m 644 $(NAME).lv2/*.ttl $(BUNDLE_INSTALL_PATH)
+# 	cp -rv $(NAME).lv2/modgui $(BUNDLE_INSTALL_PATH)/
 
-	install -m 644 $(NAME).lv2/*.so  $(COMPLETE_INSTALL_PATH)/
-	install -m 644 $(NAME).lv2/*.ttl $(COMPLETE_INSTALL_PATH)/
-# 	cp -rv $(NAME).lv2/modgui $(COMPLETE_INSTALL_PATH)/
+# --------------------------------------------------------------
+# Clean target
+
+clean:
+	rm -f $(TARGET)
+	rm -rf build
 
 # --------------------------------------------------------------
 
+# -include build/$(NAME).c.d
+
+# --------------------------------------------------------------

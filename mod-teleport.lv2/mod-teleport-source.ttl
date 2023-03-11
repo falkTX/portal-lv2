@@ -41,4 +41,10 @@ lv2:port
     lv2:index 1;
     lv2:symbol "source_right";
     lv2:name "Source Right";
+],
+[
+    a lv2:ControlPort, lv2:InputPort;
+    lv2:index 2;
+    lv2:symbol "enabled";
+    lv2:name "Enabled";
 ].

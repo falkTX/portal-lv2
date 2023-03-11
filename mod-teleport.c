@@ -1,14 +1,19 @@
 /*
- * MOD Teleport
+ * portal
 */
 
+#include <stdatomic.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <semaphore.h>
+
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
+
+#define MAX_BUFFER_SIZE 1024
 
 /**********************************************************************************************************************************************************/
 
@@ -24,137 +29,269 @@ typedef struct {
     const float* enabled;
 } Source;
 
+typedef struct {
+    float* buffer_left;
+    float* buffer_right;
+    atomic_int counter_sink;
+    atomic_int counter_source;
+    pthread_mutex_t mutex;
+    sem_t sem;
+} Portal;
+
 /**********************************************************************************************************************************************************/
 
-static bool global_init = false;
-static float* global_left;
-static float* global_right;
-static pthread_mutex_t global_mutex;
-
-// single instance for now, for testing
-static bool has_sink = false;
-static bool has_source = false;
-
-static void global_init_if_needed()
+static Portal* portal_init(const int prioceiling)
 {
-    if (global_init)
-        return;
-
-    global_init = true;
-    global_left = calloc(256, sizeof(float));
-    global_right = calloc(256, sizeof(float));
+    Portal* const portal = (Portal*)malloc(sizeof(Portal));
 
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
-    pthread_mutex_init(&global_mutex, &attr);
+#ifndef __APPLE__
+    if (pthread_mutexattr_setprioceiling(&attr, prioceiling + 1) != 0)
+        goto error;
+    if (pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_PROTECT) != 0)
+        goto error;
+#endif
+    pthread_mutex_init(&portal->mutex, &attr);
     pthread_mutexattr_destroy(&attr);
+
+    portal->counter_sink = 0;
+    portal->counter_source = 0;
+
+    portal->buffer_left = calloc(MAX_BUFFER_SIZE, sizeof(float));
+    portal->buffer_right = calloc(MAX_BUFFER_SIZE, sizeof(float));
+
+    // non-pshared, initial value 1 (lock by default)
+    sem_init(&portal->sem, 0, 1);
+    return portal;
+
+#ifndef __APPLE__
+error:
+    pthread_mutexattr_destroy(&attr);
+    free(portal);
+    return NULL;
+#endif
+}
+
+static void portal_destroy(Portal* const portal)
+{
+    sem_destroy(&portal->sem);
+    pthread_mutex_destroy(&portal->mutex);
+    free(portal->buffer_left);
+    free(portal->buffer_right);
+    free(portal);
 }
 
 /**********************************************************************************************************************************************************/
-static LV2_Handle instantiate_sink(const LV2_Descriptor* descriptor, double samplerate, const char* bundle_path, const LV2_Feature* const* features)
-{
-    if (has_sink)
-        return NULL;
 
-    has_sink = true;
-    Sink* self = (Sink*)malloc(sizeof(Sink));
-    global_init_if_needed();
-    return self;
+static Portal* g_portal = NULL;
+static bool g_sink_loaded = false;
+static bool g_source_loaded = false;
+
+static LV2_Handle instantiate_sink(const LV2_Descriptor* const descriptor,
+                                   const double samplerate,
+                                   const char* const bundle_path,
+                                   const LV2_Feature* const* const features)
+{
+    if (g_sink_loaded)
+    {
+        return NULL;
+    }
+
+    if (!g_source_loaded)
+    {
+        g_portal = portal_init(0);
+    }
+
+    if (g_portal == NULL)
+    {
+        return NULL;
+    }
+
+    g_sink_loaded = true;
+    return malloc(sizeof(Sink));
 }
 
-static LV2_Handle instantiate_source(const LV2_Descriptor* descriptor, double samplerate, const char* bundle_path, const LV2_Feature* const* features)
+static LV2_Handle instantiate_source(const LV2_Descriptor* const descriptor,
+                                     const double samplerate,
+                                     const char* const bundle_path,
+                                     const LV2_Feature* const* const features)
 {
-    if (has_source)
+    if (g_source_loaded)
+    {
         return NULL;
+    }
 
-    has_source = true;
-    Source* self = (Source*)malloc(sizeof(Source));
-    global_init_if_needed();
-    return self;
+    if (!g_sink_loaded)
+    {
+        g_portal = portal_init(0);
+    }
+
+    if (g_portal == NULL)
+    {
+        return NULL;
+    }
+
+    g_source_loaded = true;
+    return malloc(sizeof(Source));
 }
 
 /**********************************************************************************************************************************************************/
-static void connect_port(LV2_Handle instance, uint32_t port, void* data)
+void cleanup_sink(const LV2_Handle instance)
 {
-    Sink* self = (Sink*)instance;
+    free(instance);
+    g_sink_loaded = false;
+
+    if (!g_source_loaded)
+    {
+        portal_destroy(g_portal);
+        g_portal = NULL;
+    }
+}
+
+void cleanup_source(const LV2_Handle instance)
+{
+    free(instance);
+    g_source_loaded = false;
+
+    if (!g_sink_loaded)
+    {
+        portal_destroy(g_portal);
+        g_portal = NULL;
+    }
+}
+
+/**********************************************************************************************************************************************************/
+void run_sink(const LV2_Handle instance, const uint32_t samples)
+{
+    if (samples == 0 || samples > MAX_BUFFER_SIZE)
+        return;
+
+    Portal* const portal = g_portal;
+
+    const int counter_sink = portal->counter_sink;
+    const int counter_source = portal->counter_source;
+
+    // if there is no source active yet, do nothing
+    if (counter_source == 0)
+        return;
+
+    // if sink and source are processing, make sure source side always goes before us
+    if (counter_sink != 1 && counter_source != 1)
+        sem_wait(&portal->sem);
+
+    Sink* const sink = instance;
+
+    pthread_mutex_lock(&portal->mutex);
+    memcpy(portal->buffer_left, sink->left, sizeof(float)*samples);
+    memcpy(portal->buffer_right, sink->right, sizeof(float)*samples);
+    pthread_mutex_unlock(&portal->mutex);
+
+    // increment sink counter
+    ++portal->counter_sink;
+}
+
+void run_source(const LV2_Handle instance, const uint32_t samples)
+{
+    if (samples == 0)
+        return;
+
+    Source* const source = instance;
+
+    if (samples > MAX_BUFFER_SIZE)
+        goto clear;
+
+    Portal* const portal = g_portal;
+
+    // if there is no sink processing yet, do nothing
+    if (portal->counter_sink <= 1)
+        goto clear;
+
+    pthread_mutex_lock(&portal->mutex);
+    memcpy(source->left, portal->buffer_left, sizeof(float)*samples);
+    memcpy(source->right, portal->buffer_right, sizeof(float)*samples);
+    pthread_mutex_unlock(&portal->mutex);
+
+    // increment source counter
+    ++portal->counter_source;
+
+    // notify sink so it goes after us
+    sem_post(&portal->sem);
+    return;
+
+clear:
+    memset(source->left, 0, sizeof(float)*samples);
+    memset(source->right, 0, sizeof(float)*samples);
+}
+
+/**********************************************************************************************************************************************************/
+void activate_sink(const LV2_Handle instance)
+{
+    Portal* const portal = g_portal;
+    portal->counter_sink = 1;
+}
+
+void activate_source(const LV2_Handle instance)
+{
+    Portal* const portal = g_portal;
+    portal->counter_source = 1;
+}
+
+/**********************************************************************************************************************************************************/
+void deactivate_sink(const LV2_Handle instance)
+{
+    Portal* const portal = g_portal;
+    portal->counter_sink = 0;
+}
+
+void deactivate_source(const LV2_Handle instance)
+{
+    Portal* const portal = g_portal;
+
+    const int old_counter_source = portal->counter_source;
+    portal->counter_source = 0;
+
+    // handle case of sink waiting for source
+    if (portal->counter_sink != 1 && old_counter_source != 1)
+        sem_post(&portal->sem);
+}
+
+/**********************************************************************************************************************************************************/
+static void connect_port(const LV2_Handle instance, const uint32_t port, void* const data)
+{
+    Sink* const shared = instance;
 
     switch (port)
     {
     case 0:
-        self->left = (const float*)data;
+        shared->left = data;
         break;
     case 1:
-        self->right = (const float*)data;
+        shared->right = data;
         break;
     case 2:
-        self->enabled = (const float*)data;
+        shared->enabled = data;
         break;
     }
 }
 
 /**********************************************************************************************************************************************************/
-void run_sink(LV2_Handle instance, uint32_t samples)
-{
-    Sink* self = (Sink*)instance;
-
-    pthread_mutex_lock(&global_mutex);
-    memcpy(global_left, self->left, sizeof(float)*samples);
-    memcpy(global_right, self->right, sizeof(float)*samples);
-    pthread_mutex_unlock(&global_mutex);
-}
-
-void run_source(LV2_Handle instance, uint32_t samples)
-{
-    Source* self = (Source*)instance;
-
-    pthread_mutex_lock(&global_mutex);
-    memcpy(self->left, global_left, sizeof(float)*samples);
-    memcpy(self->right, global_right, sizeof(float)*samples);
-    pthread_mutex_unlock(&global_mutex);
-}
-
-/**********************************************************************************************************************************************************/
-void activate(LV2_Handle instance)
-{
-    // TODO: include the activate function code here
-}
-
-/**********************************************************************************************************************************************************/
-void deactivate(LV2_Handle instance)
-{
-    // TODO: include the deactivate function code here
-}
-
-/**********************************************************************************************************************************************************/
-void cleanup_sink(LV2_Handle instance)
-{
-    has_sink = false;
-    free(instance);
-}
-
-void cleanup_source(LV2_Handle instance)
-{
-    has_source = false;
-    free(instance);
-}
-
-/**********************************************************************************************************************************************************/
-const void* extension_data(const char* uri)
+const void* extension_data(const char* const uri)
 {
     return NULL;
 }
 
 /**********************************************************************************************************************************************************/
 LV2_SYMBOL_EXPORT
-const LV2_Descriptor* lv2_descriptor(uint32_t index)
+const LV2_Descriptor* lv2_descriptor(const uint32_t index)
 {
     static const LV2_Descriptor descriptor_sink = {
         "https://mod.audio/plugins/teleport#sink",
         instantiate_sink,
         connect_port,
-        activate,
+        activate_sink,
         run_sink,
-        deactivate,
+        deactivate_sink,
         cleanup_sink,
         extension_data
     };
@@ -163,9 +300,9 @@ const LV2_Descriptor* lv2_descriptor(uint32_t index)
         "https://mod.audio/plugins/teleport#source",
         instantiate_source,
         connect_port,
-        activate,
+        activate_source,
         run_source,
-        deactivate,
+        deactivate_source,
         cleanup_source,
         extension_data
     };
