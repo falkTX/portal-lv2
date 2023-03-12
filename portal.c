@@ -169,7 +169,7 @@ static void run_sink(const LV2_Handle instance, const uint32_t samples)
 
     if (samples > MAX_BUFFER_SIZE)
     {
-        *self->status = 2.f;
+        *sink->status = 2.f;
         return;
     }
 
@@ -181,12 +181,12 @@ static void run_sink(const LV2_Handle instance, const uint32_t samples)
     // if there is no source active yet, do nothing
     if (counter_source == 0)
     {
-        *self->status = 0.f;
+        *sink->status = 0.f;
         return;
     }
 
     const bool processing = counter_sink != 1 && counter_source != 1;
-    *self->status = processing ? 1.f : 0.f;
+    *sink->status = processing ? 1.f : 0.f;
 
     if (samples == 0)
         return;
@@ -210,7 +210,7 @@ static void run_source(const LV2_Handle instance, const uint32_t samples)
 
     if (samples > MAX_BUFFER_SIZE)
     {
-        *self->status = 2.f;
+        *source->status = 2.f;
         goto clear;
     }
 
@@ -219,11 +219,11 @@ static void run_source(const LV2_Handle instance, const uint32_t samples)
     // if there is no sink processing yet, do nothing
     if (atomic_load(&portal->counter_sink) <= 1)
     {
-        *self->status = 0.f;
+        *source->status = 0.f;
         goto clear;
     }
 
-    *self->status = 1.f;
+    *source->status = 1.f;
 
     if (samples == 0)
         return;
@@ -295,7 +295,7 @@ static void connect_port(const LV2_Handle instance, const uint32_t port, void* c
     case 2:
         shared->enabled = data;
         break;
-    case 2:
+    case 3:
         shared->status = data;
         break;
     }
