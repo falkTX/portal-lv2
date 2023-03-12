@@ -1,7 +1,7 @@
-.mod-pedal.ui-draggable[mod-uri="https%3A//mod.audio/plugins/teleport%23source"] {
+.mod-pedal.ui-draggable[mod-uri="https%3A//falktx.com/plugins/portal%23source"] {
     z-index: 30 !important;
 }
-.mod-pedal.ui-draggable[mod-uri="https%3A//mod.audio/plugins/teleport%23source"] > div.mod-actions {
+.mod-pedal.ui-draggable[mod-uri="https%3A//falktx.com/plugins/portal%23source"] > div.mod-actions {
     right: 66px;
 }
 

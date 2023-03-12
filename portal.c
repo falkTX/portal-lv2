@@ -314,7 +314,7 @@ LV2_SYMBOL_EXPORT
 const LV2_Descriptor* lv2_descriptor(const uint32_t index)
 {
     static const LV2_Descriptor descriptor_sink = {
-        "https://mod.audio/plugins/teleport#sink",
+        "https://falktx.com/plugins/portal#sink",
         instantiate_sink,
         connect_port,
         activate_sink,
@@ -325,7 +325,7 @@ const LV2_Descriptor* lv2_descriptor(const uint32_t index)
     };
 
     static const LV2_Descriptor descriptor_source = {
-        "https://mod.audio/plugins/teleport#source",
+        "https://falktx.com/plugins/portal#source",
         instantiate_source,
         connect_port,
         activate_source,
