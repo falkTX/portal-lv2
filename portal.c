@@ -46,11 +46,19 @@ static Portal* portal_init(const int prioceiling)
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
 #ifndef __APPLE__
-    if (pthread_mutexattr_setprioceiling(&attr, prioceiling + 1) != 0)
-        goto error;
-    if (pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_PROTECT) != 0)
-        goto error;
+    if (prioceiling != 0)
+    {
+        if (pthread_mutexattr_setprioceiling(&attr, prioceiling + 1) != 0)
+            goto error;
+        if (pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_PROTECT) != 0)
+            goto error;
+    }
+    else
 #endif
+    {
+        if (pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT) != 0)
+            goto error;
+    }
     pthread_mutex_init(&portal->mutex, &attr);
     pthread_mutexattr_destroy(&attr);
 
