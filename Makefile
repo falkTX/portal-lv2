@@ -44,7 +44,7 @@ install: build
 	install -d $(BUNDLE_INSTALL_PATH)
 	install -m 644 $(NAME).lv2/*.so $(BUNDLE_INSTALL_PATH)
 	install -m 644 $(NAME).lv2/*.ttl $(BUNDLE_INSTALL_PATH)
-# 	cp -rv $(NAME).lv2/modgui $(BUNDLE_INSTALL_PATH)/
+	cp -rv $(NAME).lv2/modgui $(BUNDLE_INSTALL_PATH)/
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Clean target
