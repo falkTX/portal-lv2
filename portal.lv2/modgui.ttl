@@ -1,20 +1,28 @@
 @prefix modgui: <http://moddevices.com/ns/modgui#> .
 @prefix lv2:    <http://lv2plug.in/ns/lv2core#> .
 
-<https://mod.audio/plugins/teleport#sink>
+<https://falktx.com/plugins/portal#sink>
     modgui:gui [
         modgui:resourcesDirectory <modgui> ;
+        modgui:javascript <modgui/javascript-sink.js> ;
         modgui:iconTemplate <modgui/icon-sink.html> ;
         modgui:stylesheet <modgui/stylesheet-sink.css> ;
         modgui:screenshot <modgui/screenshot-sink.png> ;
         modgui:thumbnail <modgui/thumbnail-sink.png> ;
+        modgui:monitoredOutputs [
+            lv2:symbol "status" ;
+        ] ;
     ] .
 
-<https://mod.audio/plugins/teleport#source>
+<https://falktx.com/plugins/portal#source>
     modgui:gui [
         modgui:resourcesDirectory <modgui> ;
+        modgui:javascript <modgui/javascript-source.js> ;
         modgui:iconTemplate <modgui/icon-source.html> ;
         modgui:stylesheet <modgui/stylesheet-source.css> ;
         modgui:screenshot <modgui/screenshot-source.png> ;
         modgui:thumbnail <modgui/thumbnail-source.png> ;
+        modgui:monitoredOutputs [
+            lv2:symbol "status" ;
+        ] ;
     ] .

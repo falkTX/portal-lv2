@@ -53,8 +53,12 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 .falktx-portal-source-light,
 .falktx-portal-source-light::before {
     position: absolute;
-    animation: falktx-portal-source-spin 7s infinite linear;
     inset: 0;
+}
+
+.falktx-portal-source-light.open,
+.falktx-portal-source-light.open::before {
+    animation: falktx-portal-source-spin 7s infinite linear;
 }
 
 .falktx-portal-source-light {
