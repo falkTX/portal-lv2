@@ -1,9 +1,6 @@
-/*
- * portal
-*/
+// 
 
 #include <stdatomic.h>
-#include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,18 +12,20 @@
 
 #define MAX_BUFFER_SIZE 1024
 
-/**********************************************************************************************************************************************************/
+//=====================================================================================================================
 
 typedef struct {
     const float* left;
     const float* right;
     const float* enabled;
+    float* status;
 } Sink;
 
 typedef struct {
     float* left;
     float* right;
     const float* enabled;
+    float* status;
 } Source;
 
 typedef struct {
@@ -38,7 +37,7 @@ typedef struct {
     sem_t sem;
 } Portal;
 
-/**********************************************************************************************************************************************************/
+//=====================================================================================================================
 
 static Portal* portal_init(const int prioceiling)
 {
@@ -82,7 +81,7 @@ static void portal_destroy(Portal* const portal)
     free(portal);
 }
 
-/**********************************************************************************************************************************************************/
+//=====================================================================================================================
 
 static Portal* g_portal = NULL;
 static bool g_sink_loaded = false;
@@ -136,8 +135,9 @@ static LV2_Handle instantiate_source(const LV2_Descriptor* const descriptor,
     return malloc(sizeof(Source));
 }
 
-/**********************************************************************************************************************************************************/
-void cleanup_sink(const LV2_Handle instance)
+//=====================================================================================================================
+
+static void cleanup_sink(const LV2_Handle instance)
 {
     free(instance);
     g_sink_loaded = false;
@@ -149,7 +149,7 @@ void cleanup_sink(const LV2_Handle instance)
     }
 }
 
-void cleanup_source(const LV2_Handle instance)
+static void cleanup_source(const LV2_Handle instance)
 {
     free(instance);
     g_source_loaded = false;
@@ -161,11 +161,17 @@ void cleanup_source(const LV2_Handle instance)
     }
 }
 
-/**********************************************************************************************************************************************************/
-void run_sink(const LV2_Handle instance, const uint32_t samples)
+//=====================================================================================================================
+
+static void run_sink(const LV2_Handle instance, const uint32_t samples)
 {
-    if (samples == 0 || samples > MAX_BUFFER_SIZE)
+    Sink* const sink = instance;
+
+    if (samples > MAX_BUFFER_SIZE)
+    {
+        *self->status = 2.f;
         return;
+    }
 
     Portal* const portal = g_portal;
 
@@ -174,13 +180,20 @@ void run_sink(const LV2_Handle instance, const uint32_t samples)
 
     // if there is no source active yet, do nothing
     if (counter_source == 0)
+    {
+        *self->status = 0.f;
+        return;
+    }
+
+    const bool processing = counter_sink != 1 && counter_source != 1;
+    *self->status = processing ? 1.f : 0.f;
+
+    if (samples == 0)
         return;
 
     // if sink and source are processing, make sure source side always goes before us
-    if (counter_sink != 1 && counter_source != 1)
+    if (processing)
         sem_wait(&portal->sem);
-
-    Sink* const sink = instance;
 
     pthread_mutex_lock(&portal->mutex);
     memcpy(portal->buffer_left, sink->left, sizeof(float)*samples);
@@ -191,21 +204,29 @@ void run_sink(const LV2_Handle instance, const uint32_t samples)
     atomic_fetch_add(&portal->counter_sink, 1);
 }
 
-void run_source(const LV2_Handle instance, const uint32_t samples)
+static void run_source(const LV2_Handle instance, const uint32_t samples)
 {
-    if (samples == 0)
-        return;
-
     Source* const source = instance;
 
     if (samples > MAX_BUFFER_SIZE)
+    {
+        *self->status = 2.f;
         goto clear;
+    }
 
     Portal* const portal = g_portal;
 
     // if there is no sink processing yet, do nothing
     if (atomic_load(&portal->counter_sink) <= 1)
+    {
+        *self->status = 0.f;
         goto clear;
+    }
+
+    *self->status = 1.f;
+
+    if (samples == 0)
+        return;
 
     pthread_mutex_lock(&portal->mutex);
     memcpy(source->left, portal->buffer_left, sizeof(float)*samples);
@@ -224,27 +245,29 @@ clear:
     memset(source->right, 0, sizeof(float)*samples);
 }
 
-/**********************************************************************************************************************************************************/
-void activate_sink(const LV2_Handle instance)
+//=====================================================================================================================
+
+static void activate_sink(const LV2_Handle instance)
 {
     Portal* const portal = g_portal;
     atomic_store(&portal->counter_sink, 1);
 }
 
-void activate_source(const LV2_Handle instance)
+static void activate_source(const LV2_Handle instance)
 {
     Portal* const portal = g_portal;
     atomic_store(&portal->counter_source, 1);
 }
 
-/**********************************************************************************************************************************************************/
-void deactivate_sink(const LV2_Handle instance)
+//=====================================================================================================================
+
+static void deactivate_sink(const LV2_Handle instance)
 {
     Portal* const portal = g_portal;
     atomic_store(&portal->counter_sink, 0);
 }
 
-void deactivate_source(const LV2_Handle instance)
+static void deactivate_source(const LV2_Handle instance)
 {
     Portal* const portal = g_portal;
 
@@ -255,7 +278,8 @@ void deactivate_source(const LV2_Handle instance)
         sem_post(&portal->sem);
 }
 
-/**********************************************************************************************************************************************************/
+//=====================================================================================================================
+
 static void connect_port(const LV2_Handle instance, const uint32_t port, void* const data)
 {
     Sink* const shared = instance;
@@ -271,16 +295,21 @@ static void connect_port(const LV2_Handle instance, const uint32_t port, void* c
     case 2:
         shared->enabled = data;
         break;
+    case 2:
+        shared->status = data;
+        break;
     }
 }
 
-/**********************************************************************************************************************************************************/
-const void* extension_data(const char* const uri)
+//=====================================================================================================================
+
+static const void* extension_data(const char* const uri)
 {
     return NULL;
 }
 
-/**********************************************************************************************************************************************************/
+//=====================================================================================================================
+
 LV2_SYMBOL_EXPORT
 const LV2_Descriptor* lv2_descriptor(const uint32_t index)
 {
@@ -314,4 +343,5 @@ const LV2_Descriptor* lv2_descriptor(const uint32_t index)
     }
 }
 
-/**********************************************************************************************************************************************************/
+//=====================================================================================================================
+

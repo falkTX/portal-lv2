@@ -1,0 +1,75 @@
+.mod-pedal.ui-draggable[mod-uri="https%3A//mod.audio/plugins/teleport%23sink"] {
+    z-index: 30 !important;
+}
+.mod-pedal.ui-draggable[mod-uri="https%3A//mod.audio/plugins/teleport%23sink"] > div.mod-actions {
+    right: 66px;
+}
+
+.falktx-portal-sink {
+    background-color: black;
+    border-radius: 195px;
+    width: 300px;
+    height: 390px;
+}
+
+.falktx-portal-sink .mod-pedal-input,
+.falktx-portal-sink .mod-pedal-output {
+    top: 125px;
+    left: 70px;
+}
+
+.falktx-portal-sink .mod-pedal-input .mod-audio-input {
+    margin-bottom: 25px;
+}
+
+/* The code after this line is based on an existing work.
+
+Copyright (c) 2023 by Jane Ori 💜 (https://codepen.io/propjockey/pen/vYxraBz)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+.falktx-portal-sink-frame {
+    position: absolute;
+    width: 390px;
+    height: 390px;
+    filter: contrast(1.75);
+    transform: translateX(-50px) scaleX(0.7);
+}
+
+@keyframes falktx-portal-sink-spin { 0% { transform: rotate(359deg); } }
+
+.falktx-portal-sink-light,
+.falktx-portal-sink-light::before {
+    animation: falktx-portal-sink-spin 7s infinite linear;
+    inset: 0;
+    position: absolute;
+}
+
+.falktx-portal-sink-light {
+    -webkit-mask: url(/resources/portal.png{{{ns}}}) top left / 100% 100% no-repeat;
+    mask: url(/resources/portal.png{{{ns}}}) top left / 100% 100% no-repeat;
+    margin: -50px;
+}
+
+.falktx-portal-sink-light::before {
+    animation-direction: reverse;
+    content: "";
+}
+.falktx-portal-sink-light.on::before {
+    background: linear-gradient(white -50%, transparent 50%, white 125%), orange;
+}
+.falktx-portal-sink-light.off::before {
+    background: linear-gradient(white -50%, transparent 50%, white 125%), white;
+}

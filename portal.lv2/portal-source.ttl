@@ -6,21 +6,19 @@
 @prefix opts: <http://lv2plug.in/ns/ext/options#>.
 @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
-@prefix pset: <http://lv2plug.in/ns/ext/presets#>.
-@prefix units: <http://lv2plug.in/ns/extensions/units#>.
 
-<https://mod.audio/plugins/teleport#source>
+<https://falktx.com/plugins/portal#source>
 a lv2:Plugin, lv2:UtilityPlugin, doap:Project;
 
-mod:brand "MOD";
-mod:label "Teleport Source";
+mod:brand "falkTX";
+mod:label "Portal Source";
 
-doap:name "Teleport Source";
+doap:name "Portal Source";
 
 doap:maintainer [
-    foaf:name "MOD Audio";
-    foaf:homepage <https://mod.audio>;
-    foaf:mbox <mailto:contact@mod.audio>;
+    foaf:name "falkTX";
+    foaf:homepage <https://github.com/falkTX/portal-lv2>;
+    foaf:mbox <mailto:falktx@falktx.com>;
 ];
 
 doap:license <http://spdx.org/licenses/ISC.html>;
@@ -47,4 +45,16 @@ lv2:port
     lv2:index 2;
     lv2:symbol "enabled";
     lv2:name "Enabled";
+    lv2:minimum 0 ;
+    lv2:maximum 1 ;
+    lv2:default 1 ;
+],
+[
+    a lv2:ControlPort, lv2:OutputPort;
+    lv2:index 3;
+    lv2:symbol "status";
+    lv2:name "Status";
+    lv2:minimum 0 ;
+    lv2:maximum 2 ;
+    lv2:default 0 ;
 ].

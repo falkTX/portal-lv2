@@ -1,0 +1,12 @@
+@prefix lv2: <http://lv2plug.in/ns/lv2core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<https://falktx.com/plugins/portal#sink>
+    a lv2:Plugin ;
+    lv2:binary <portal.so> ;
+    rdfs:seeAlso <portal-sink.ttl> , <modgui.ttl> .
+
+<https://falktx.com/plugins/portal#source>
+    a lv2:Plugin ;
+    lv2:binary <portal.so> ;
+    rdfs:seeAlso <portal-source.ttl> , <modgui.ttl> .
