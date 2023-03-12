@@ -45,13 +45,15 @@ Now imagine the scenario of 4 plugins running in parallel, using 2 series for si
 
 There are only 2 dependency chains now, B waits for A and D waits for C.
 This means the 2 series can run in parallel, each on its own CPU core.
-In the audio processing side the time needed to run all plugins can now be half of the first example.
+In the audio processing side the time spent running all plugins is now up to half of the first example.
 We can run as many series as there are cores in the system while keeping good performance.
 
-By splitting the processing chain in 2, the Portal audio plugins allow to run the 2nd part of a chain in another CPU core.
+By splitting the processing chain in 2, the Portal audio plugins allow running the 2nd part of a chain in another CPU core.
+Simply load both sink and source portal plugins and connect each to the appropriate plugins.
+Note that only load 1 sink and 1 source can be loaded at a time.
 
 The side effect is 1 audio cycle of latency coming out of the source/exit/transmitter portal.
-For some effects like delay and reverb, this could be a worthy compromise.
+For some effects like delay and reverb this could be a worthy compromise.
 """;
 
 lv2:port
