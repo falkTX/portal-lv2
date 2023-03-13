@@ -15,7 +15,7 @@
 .falktx-portal-sink .mod-pedal-input,
 .falktx-portal-sink .mod-pedal-output {
     top: 125px;
-    left: 70px;
+    left: 80px;
 }
 
 .falktx-portal-sink .mod-pedal-input .mod-audio-input {
@@ -44,7 +44,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     position: absolute;
     width: 390px;
     height: 390px;
-    filter: contrast(1.75);
+    /*filter: contrast(1.75);*/
     transform: translateX(-50px) scaleX(0.7);
 }
 
