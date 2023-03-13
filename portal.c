@@ -8,13 +8,18 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include "lv2/lv2plug.in/ns/lv2core/lv2.h"
+#include <lv2/lv2plug.in/ns/lv2core/lv2.h>
+#include <lv2/lv2plug.in/ns/ext/atom/atom.h>
+#include <lv2/lv2plug.in/ns/ext/buf-size/buf-size.h>
+#include <lv2/lv2plug.in/ns/ext/log/logger.h>
+#include <lv2/lv2plug.in/ns/ext/options/options.h>
+#include <lv2/lv2plug.in/ns/ext/urid/urid.h>
 
-#define MAX_BUFFER_SIZE 1024
-
-#define __MOD_DEVICES__
+#ifdef __MOD_DEVICES__
+#define MAX_BUFFER_SIZE 256
 #define SEMAPHORE_PSHARED 0
 #else
+#define MAX_BUFFER_SIZE 8192
 #define SEMAPHORE_PSHARED 1
 #endif
 
@@ -97,6 +102,39 @@ static void portal_destroy(Portal* const portal)
 
 //=====================================================================================================================
 
+static int get_lv2_prio(LV2_Options_Option* const options, LV2_URID_Map* const uridMap)
+{
+    if (options == NULL || uridMap == NULL)
+        return 0;
+
+    const LV2_URID uridAtomInt = uridMap->map(uridMap->handle, LV2_ATOM__Int);
+    const LV2_URID uridPriority = uridMap->map(uridMap->handle, "http://ardour.org/lv2/threads/#schedPriority");
+
+    for (int i=0; options[i].key != 0 && options[i].subject != 0; ++i)
+    {
+        // find our wanted key
+        if (options[i].key != uridPriority)
+            continue;
+
+        // everything must match, otherwise invalid
+        if (options[i].context != LV2_OPTIONS_INSTANCE)
+            break;
+        if (options[i].subject != 0)
+            break;
+        if (options[i].size != sizeof(int32_t))
+            break;
+        if (options[i].type != uridAtomInt)
+            break;
+
+        const int32_t* const valueptr = options[i].value;
+        return *valueptr;
+    }
+
+    return 0;
+}
+
+//=====================================================================================================================
+
 static Portal* g_portal = NULL;
 static bool g_sink_loaded = false;
 static bool g_source_loaded = false;
@@ -106,18 +144,50 @@ static LV2_Handle instantiate_sink(const LV2_Descriptor* const descriptor,
                                    const char* const bundle_path,
                                    const LV2_Feature* const* const features)
 {
+    bool fixedBlockLength = false;
+    LV2_Log_Log* log;
+    LV2_Options_Option* options;
+    LV2_URID_Map* uridMap;
+
+    for (int i=0; features[i] != NULL; ++i)
+    {
+        if (!strcmp(features[i]->URI, LV2_BUF_SIZE__fixedBlockLength))
+            fixedBlockLength = true;
+        else if (!strcmp(features[i]->URI, LV2_LOG__log))
+            log = features[i]->data;
+        else if (!strcmp(features[i]->URI, LV2_OPTIONS__options))
+            options = features[i]->data;
+        else if (!strcmp(features[i]->URI, LV2_URID__map))
+            uridMap = features[i]->data;
+    }
+
+    LV2_Log_Logger logger;
+    lv2_log_logger_init(&logger, uridMap, log);
+
+    if (!fixedBlockLength)
+    {
+        lv2_log_error(&logger, "Host does not support lv2plug.in/ns/ext/buf-size#fixedBlockLength, cannot continue");
+        return NULL;
+    }
+
     if (g_sink_loaded)
     {
+        lv2_log_error(&logger, "A portal sink is already loaded");
         return NULL;
     }
 
     if (!g_source_loaded)
     {
-        g_portal = portal_init(0);
+        lv2_log_note(&logger, "Creating global portal instance");
+        const int prio = get_lv2_prio(options, uridMap);
+        if (prio == 0)
+            lv2_log_note(&logger, "NOTICE: Host does not support ardour.org/lv2/threads/#schedPriority");
+        g_portal = portal_init(prio);
     }
 
     if (g_portal == NULL)
     {
+        lv2_log_error(&logger, "Failed to fetch global portal instance");
         return NULL;
     }
 
@@ -130,18 +200,50 @@ static LV2_Handle instantiate_source(const LV2_Descriptor* const descriptor,
                                      const char* const bundle_path,
                                      const LV2_Feature* const* const features)
 {
+    bool fixedBlockLength = false;
+    LV2_Log_Log* log;
+    LV2_Options_Option* options;
+    LV2_URID_Map* uridMap;
+
+    for (int i=0; features[i] != NULL; ++i)
+    {
+        if (!strcmp(features[i]->URI, LV2_BUF_SIZE__fixedBlockLength))
+            fixedBlockLength = true;
+        else if (!strcmp(features[i]->URI, LV2_LOG__log))
+            log = features[i]->data;
+        else if (!strcmp(features[i]->URI, LV2_OPTIONS__options))
+            options = features[i]->data;
+        else if (!strcmp(features[i]->URI, LV2_URID__map))
+            uridMap = features[i]->data;
+    }
+
+    LV2_Log_Logger logger;
+    lv2_log_logger_init(&logger, uridMap, log);
+
+    if (!fixedBlockLength)
+    {
+        lv2_log_error(&logger, "Host does not support lv2plug.in/ns/ext/buf-size#fixedBlockLength, cannot continue");
+        return NULL;
+    }
+
     if (g_source_loaded)
     {
+        lv2_log_error(&logger, "A portal source is already loaded");
         return NULL;
     }
 
     if (!g_sink_loaded)
     {
-        g_portal = portal_init(0);
+        lv2_log_note(&logger, "Creating global portal instance");
+        const int prio = get_lv2_prio(options, uridMap);
+        if (prio == 0)
+            lv2_log_note(&logger, "NOTICE: Host does not support ardour.org/lv2/threads/#schedPriority");
+        g_portal = portal_init(prio);
     }
 
     if (g_portal == NULL)
     {
+        lv2_log_error(&logger, "Failed to fetch global portal instance");
         return NULL;
     }
 

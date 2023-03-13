@@ -1,10 +1,8 @@
 @prefix lv2:  <http://lv2plug.in/ns/lv2core#>.
 @prefix doap: <http://usefulinc.com/ns/doap#>.
-@prefix epp: <http://lv2plug.in/ns/ext/port-props#>.
 @prefix foaf: <http://xmlns.com/foaf/0.1/>.
-@prefix mod: <http://moddevices.com/ns/mod#>.
+@prefix mod:  <http://moddevices.com/ns/mod#>.
 @prefix opts: <http://lv2plug.in/ns/ext/options#>.
-@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 
 <https://falktx.com/plugins/portal#source>
@@ -22,6 +20,12 @@ doap:maintainer [
 ];
 
 doap:license <http://spdx.org/licenses/ISC.html>;
+
+lv2:requiredFeature <http://lv2plug.in/ns/ext/buf-size#fixedBlockLength> ;
+lv2:optionalFeature opts:options ,
+                    <http://lv2plug.in/ns/ext/log#log> ,
+                    <http://lv2plug.in/ns/ext/urid#map>;
+opts:supportedOption <http://ardour.org/lv2/threads/#schedPriority> ;
 
 rdfs:comment """
 The Portal audio plugins allow you to magically send audio from one side of the processing chain into another.
