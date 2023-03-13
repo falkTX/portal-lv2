@@ -9,6 +9,7 @@
         modgui:stylesheet <modgui/stylesheet-sink.css> ;
         modgui:screenshot <modgui/screenshot-sink.png> ;
         modgui:thumbnail <modgui/thumbnail-sink.png> ;
+        modgui:discussionURL <https://forum.mod.audio/t/introducing-portal/9329> ;
         modgui:monitoredOutputs [
             lv2:symbol "status" ;
         ] ;
@@ -22,6 +23,7 @@
         modgui:stylesheet <modgui/stylesheet-source.css> ;
         modgui:screenshot <modgui/screenshot-source.png> ;
         modgui:thumbnail <modgui/thumbnail-source.png> ;
+        modgui:discussionURL <https://forum.mod.audio/t/introducing-portal/9329> ;
         modgui:monitoredOutputs [
             lv2:symbol "status" ;
         ] ;
