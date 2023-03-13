@@ -32,10 +32,6 @@ Note that only load 1 sink and 1 source can be loaded at a time.
 The side effect is 1 audio cycle of latency coming out of the source/exit/transmitter portal.
 For some effects like delay and reverb this could be a worthy compromise.
 
-TODO: require fixed block size
-TODO: read ardour prio
-TODO: log errors
-
 ## Requirements
 
 There are a few requirements for the host side in order to make this plugin setup work:
@@ -54,15 +50,8 @@ Portal graphics based on https://codepen.io/propjockey/pen/vYxraBz
 
 > Copyright (c) 2023 by Jane Ori
 > 
-> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-> documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
-> rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-> persons to whom the Software is furnished to do so, subject to the following conditions:
+> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 > 
-> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
-> Software.
+> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 > 
-> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-> WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-> OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
