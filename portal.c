@@ -12,6 +12,12 @@
 
 #define MAX_BUFFER_SIZE 1024
 
+#define __MOD_DEVICES__
+#define SEMAPHORE_PSHARED 0
+#else
+#define SEMAPHORE_PSHARED 1
+#endif
+
 //=====================================================================================================================
 
 typedef struct {
@@ -68,8 +74,8 @@ static Portal* portal_init(const int prioceiling)
     portal->buffer_left = calloc(MAX_BUFFER_SIZE, sizeof(float));
     portal->buffer_right = calloc(MAX_BUFFER_SIZE, sizeof(float));
 
-    // non-pshared, initial value 1 (lock by default)
-    sem_init(&portal->sem, 0, 1);
+    // NOTE initial value 1 (lock by default)
+    sem_init(&portal->sem, SEMAPHORE_PSHARED, 1);
     return portal;
 
 #ifndef __APPLE__
