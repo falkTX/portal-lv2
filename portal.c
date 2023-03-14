@@ -50,27 +50,16 @@ typedef struct {
 
 //=====================================================================================================================
 
-static Portal* portal_init(const int prioceiling)
+static Portal* portal_init()
 {
     Portal* const portal = (Portal*)malloc(sizeof(Portal));
 
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
-#ifndef __APPLE__
-    if (prioceiling != 0)
-    {
-        if (pthread_mutexattr_setprioceiling(&attr, prioceiling + 1) != 0)
-            goto error;
-        if (pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_PROTECT) != 0)
-            goto error;
-    }
-    else
-#endif
-    {
-        if (pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT) != 0)
-            goto error;
-    }
-    pthread_mutex_init(&portal->mutex, &attr);
+    if (pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT) != 0)
+        goto error1;
+    if (pthread_mutex_init(&portal->mutex, &attr) != 0)
+        goto error2;
     pthread_mutexattr_destroy(&attr);
 
     atomic_init(&portal->counter_sink, 0);
@@ -83,12 +72,11 @@ static Portal* portal_init(const int prioceiling)
     sem_init(&portal->sem, SEMAPHORE_PSHARED, 1);
     return portal;
 
-#ifndef __APPLE__
-error:
+error1:
     pthread_mutexattr_destroy(&attr);
+error2:
     free(portal);
     return NULL;
-#endif
 }
 
 static void portal_destroy(Portal* const portal)
@@ -98,39 +86,6 @@ static void portal_destroy(Portal* const portal)
     free(portal->buffer_left);
     free(portal->buffer_right);
     free(portal);
-}
-
-//=====================================================================================================================
-
-static int get_lv2_prio(LV2_Options_Option* const options, LV2_URID_Map* const uridMap)
-{
-    if (options == NULL || uridMap == NULL)
-        return 0;
-
-    const LV2_URID uridAtomInt = uridMap->map(uridMap->handle, LV2_ATOM__Int);
-    const LV2_URID uridPriority = uridMap->map(uridMap->handle, "http://ardour.org/lv2/threads/#schedPriority");
-
-    for (int i=0; options[i].key != 0 && options[i].subject != 0; ++i)
-    {
-        // find our wanted key
-        if (options[i].key != uridPriority)
-            continue;
-
-        // everything must match, otherwise invalid
-        if (options[i].context != LV2_OPTIONS_INSTANCE)
-            break;
-        if (options[i].subject != 0)
-            break;
-        if (options[i].size != sizeof(int32_t))
-            break;
-        if (options[i].type != uridAtomInt)
-            break;
-
-        const int32_t* const valueptr = options[i].value;
-        return *valueptr;
-    }
-
-    return 0;
 }
 
 //=====================================================================================================================
@@ -146,7 +101,6 @@ static LV2_Handle instantiate_sink(const LV2_Descriptor* const descriptor,
 {
     bool fixedBlockLength = false;
     LV2_Log_Log* log;
-    LV2_Options_Option* options;
     LV2_URID_Map* uridMap;
 
     for (int i=0; features[i] != NULL; ++i)
@@ -155,8 +109,6 @@ static LV2_Handle instantiate_sink(const LV2_Descriptor* const descriptor,
             fixedBlockLength = true;
         else if (!strcmp(features[i]->URI, LV2_LOG__log))
             log = features[i]->data;
-        else if (!strcmp(features[i]->URI, LV2_OPTIONS__options))
-            options = features[i]->data;
         else if (!strcmp(features[i]->URI, LV2_URID__map))
             uridMap = features[i]->data;
     }
@@ -179,10 +131,7 @@ static LV2_Handle instantiate_sink(const LV2_Descriptor* const descriptor,
     if (!g_source_loaded)
     {
         lv2_log_note(&logger, "Creating global portal instance");
-        const int prio = get_lv2_prio(options, uridMap);
-        if (prio == 0)
-            lv2_log_note(&logger, "NOTICE: Host does not support ardour.org/lv2/threads/#schedPriority");
-        g_portal = portal_init(prio);
+        g_portal = portal_init();
     }
 
     if (g_portal == NULL)
@@ -202,7 +151,6 @@ static LV2_Handle instantiate_source(const LV2_Descriptor* const descriptor,
 {
     bool fixedBlockLength = false;
     LV2_Log_Log* log;
-    LV2_Options_Option* options;
     LV2_URID_Map* uridMap;
 
     for (int i=0; features[i] != NULL; ++i)
@@ -211,8 +159,6 @@ static LV2_Handle instantiate_source(const LV2_Descriptor* const descriptor,
             fixedBlockLength = true;
         else if (!strcmp(features[i]->URI, LV2_LOG__log))
             log = features[i]->data;
-        else if (!strcmp(features[i]->URI, LV2_OPTIONS__options))
-            options = features[i]->data;
         else if (!strcmp(features[i]->URI, LV2_URID__map))
             uridMap = features[i]->data;
     }
@@ -235,10 +181,7 @@ static LV2_Handle instantiate_source(const LV2_Descriptor* const descriptor,
     if (!g_sink_loaded)
     {
         lv2_log_note(&logger, "Creating global portal instance");
-        const int prio = get_lv2_prio(options, uridMap);
-        if (prio == 0)
-            lv2_log_note(&logger, "NOTICE: Host does not support ardour.org/lv2/threads/#schedPriority");
-        g_portal = portal_init(prio);
+        g_portal = portal_init();
     }
 
     if (g_portal == NULL)
